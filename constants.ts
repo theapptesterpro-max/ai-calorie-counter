@@ -114,6 +114,31 @@ FOOD_DATABASE.push(
   { id: '140', name: 'Sushi (salmon roll)', calories: 150, protein: 8, carbs: 25, fats: 2 }
 );
 
+// Indian Food Items
+FOOD_DATABASE.push(
+  { id: '201', name: 'Roti / Chapati', calories: 297, protein: 11, carbs: 60, fats: 2 },
+  { id: '202', name: 'Naan Bread', calories: 317, protein: 10, carbs: 57, fats: 5 },
+  { id: '203', name: 'Dal (lentil soup, cooked)', calories: 105, protein: 7, carbs: 18, fats: 1 },
+  { id: '204', name: 'Paneer (Indian cheese)', calories: 296, protein: 18, carbs: 6, fats: 22 },
+  { id: '205', name: 'Basmati Rice (cooked)', calories: 135, protein: 4, carbs: 28, fats: 0.5 },
+  { id: '206', name: 'Chicken Tikka Masala', calories: 180, protein: 14, carbs: 8, fats: 10 },
+  { id: '207', name: 'Samosa (vegetable, fried)', calories: 262, protein: 4, carbs: 32, fats: 14 },
+  { id: '208', name: 'Chole (chickpea curry)', calories: 150, protein: 7, carbs: 22, fats: 4 },
+  { id: '209', name: 'Palak Paneer', calories: 160, protein: 10, carbs: 8, fats: 11 },
+  { id: '210', name: 'Aloo Gobi', calories: 98, protein: 3, carbs: 13, fats: 4 },
+  { id: '211', name: 'Butter Chicken (Murgh Makhani)', calories: 210, protein: 15, carbs: 6, fats: 14 },
+  { id: '212', name: 'Biryani (chicken)', calories: 290, protein: 18, carbs: 35, fats: 8 },
+  { id: '213', name: 'Raita (yogurt dip)', calories: 60, protein: 3, carbs: 5, fats: 3 },
+  { id: '214', name: 'Idli (steamed rice cake)', calories: 160, protein: 4, carbs: 36, fats: 0.4 },
+  { id: '215', name: 'Dosa (plain)', calories: 168, protein: 4, carbs: 32, fats: 2.5 },
+  { id: '216', name: 'Vada Pav', calories: 300, protein: 7, carbs: 48, fats: 9 },
+  { id: '217', name: 'Gulab Jamun (1 piece)', calories: 150, protein: 2, carbs: 25, fats: 4.5 },
+  { id: '218', name: 'Jalebi (1 piece)', calories: 100, protein: 1, carbs: 22, fats: 1 },
+  { id: '219', name: 'Tandoori Chicken', calories: 220, protein: 26, carbs: 2, fats: 12 },
+  { id: '220', name: 'Ghee', calories: 899, protein: 0, carbs: 0, fats: 100 }
+);
+
+
 export const MACRO_PRESETS = [
   { name: 'Balanced', values: { protein: 30, carbs: 40, fats: 30 } },
   { name: 'High Protein', values: { protein: 40, carbs: 30, fats: 30 } },

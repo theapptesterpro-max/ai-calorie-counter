@@ -35,6 +35,11 @@ export interface MacroGoals {
   fats: number; // in grams
 }
 
+export interface WeightLogEntry {
+  date: string; // YYYY-MM-DD
+  weight: number; // kg
+}
+
 export interface UserProfile {
   age: number;
   gender: Gender;
@@ -46,6 +51,7 @@ export interface UserProfile {
   rate: WeightGoalRate | null;
   calorieGoal: number;
   macroGoals: MacroGoals;
+  weightLog: WeightLogEntry[];
 }
 
 export enum MealType {

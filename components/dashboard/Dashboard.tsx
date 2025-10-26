@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useCallback } from 'react';
+
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { UserProfile, DailyLog, FoodEntry, MealType } from '../../types';
 import { formatDate } from '../../utils/helpers';
 import CalorieTracker from './CalorieTracker';
@@ -7,21 +8,43 @@ import MealSection from './MealSection';
 import AddFoodModal from '../modals/AddFoodModal';
 import LogWithPhotoModal from '../modals/LogWithPhotoModal';
 import SettingsModal from '../modals/SettingsModal';
-import { ChevronLeft, ChevronRight, Plus, Camera, Settings } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Camera, Settings, LogOut } from 'lucide-react';
+import { useAuth } from '../../src/hooks/useAuth';
+import { getDailyLog, updateDailyLog, updateUserProfile as saveUserProfile } from '../../src/services/firestoreService';
+import { Loader2 } from 'lucide-react';
 
 interface DashboardProps {
   userProfile: UserProfile;
   updateUserProfile: (profile: UserProfile) => void;
-  logs: Record<string, DailyLog>;
-  updateLogs: (date: string, newLog: DailyLog) => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ userProfile, updateUserProfile, logs, updateLogs }) => {
+const Dashboard: React.FC<DashboardProps> = ({ userProfile, updateUserProfile }) => {
+  const { user, logout } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [activeModal, setActiveModal] = useState<'addFood' | 'logWithPhoto' | 'settings' | null>(null);
+  const [logs, setLogs] = useState<Record<string, DailyLog>>({});
+  const [isLoadingLog, setIsLoadingLog] = useState(false);
 
   const dateString = useMemo(() => formatDate(currentDate), [currentDate]);
+
+  // Effect to fetch log for the current date
+  useEffect(() => {
+    if (user && !logs[dateString]) {
+      setIsLoadingLog(true);
+      getDailyLog(user.uid, dateString).then(log => {
+        setLogs(prevLogs => ({ ...prevLogs, [dateString]: log }));
+        setIsLoadingLog(false);
+      });
+    }
+  }, [user, dateString, logs]);
+
   const dailyLog = useMemo(() => logs[dateString] || { entries: [] }, [logs, dateString]);
+
+  const updateLogs = useCallback(async (date: string, newLog: DailyLog) => {
+    if (!user) return;
+    setLogs(prev => ({ ...prev, [date]: newLog }));
+    await updateDailyLog(user.uid, date, newLog);
+  }, [user]);
 
   const addFoodEntry = useCallback((entry: Omit<FoodEntry, 'id' | 'timestamp'>) => {
     const newEntry: FoodEntry = {
@@ -31,7 +54,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userProfile, updateUserProfile, l
     };
     const newLog = { entries: [...dailyLog.entries, newEntry] };
     updateLogs(dateString, newLog);
-  }, [dailyLog, updateLogs, dateString]);
+  }, [dailyLog.entries, updateLogs, dateString]);
   
   const addMultipleFoodEntries = useCallback((entries: Omit<FoodEntry, 'id'|'timestamp'>[]) => {
       const newEntries: FoodEntry[] = entries.map(entry => ({
@@ -41,7 +64,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userProfile, updateUserProfile, l
       }));
       const newLog = { entries: [...dailyLog.entries, ...newEntries] };
       updateLogs(dateString, newLog);
-  }, [dailyLog, updateLogs, dateString]);
+  }, [dailyLog.entries, updateLogs, dateString]);
 
   const deleteFoodEntry = (entryId: string) => {
     const newEntries = dailyLog.entries.filter(e => e.id !== entryId);
@@ -49,11 +72,13 @@ const Dashboard: React.FC<DashboardProps> = ({ userProfile, updateUserProfile, l
     updateLogs(dateString, newLog);
   };
   
-  const copyYesterday = () => {
+  const copyYesterday = async () => {
+    if (!user) return;
     const yesterday = new Date(currentDate);
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayString = formatDate(yesterday);
-    const yesterdayLog = logs[yesterdayString];
+    const yesterdayLog = logs[yesterdayString] || await getDailyLog(user.uid, yesterdayString);
+    setLogs(prev => ({ ...prev, [yesterdayString]: yesterdayLog }));
 
     if (yesterdayLog && yesterdayLog.entries.length > 0) {
         const entriesToCopy = yesterdayLog.entries.map(({ id, timestamp, ...rest }) => rest);
@@ -63,6 +88,12 @@ const Dashboard: React.FC<DashboardProps> = ({ userProfile, updateUserProfile, l
     }
   };
 
+  const handleSaveSettings = async (updatedProfile: UserProfile) => {
+    if (!user) return;
+    updateUserProfile(updatedProfile); // Update local state immediately
+    await saveUserProfile(user.uid, updatedProfile); // Save to Firestore
+    setActiveModal(null);
+  };
 
   const totals = useMemo(() => {
     return dailyLog.entries.reduce(
@@ -91,9 +122,14 @@ const Dashboard: React.FC<DashboardProps> = ({ userProfile, updateUserProfile, l
       {/* Header */}
        <header className="flex justify-between items-center my-4">
           <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-200">My Day</h1>
-          <button onClick={() => setActiveModal('settings')} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300">
-              <Settings size={24} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setActiveModal('settings')} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300">
+                <Settings size={24} />
+            </button>
+            <button onClick={logout} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300">
+                <LogOut size={24} />
+            </button>
+          </div>
       </header>
 
       {/* Date Navigator */}
@@ -130,20 +166,25 @@ const Dashboard: React.FC<DashboardProps> = ({ userProfile, updateUserProfile, l
       </div>
 
       {/* Meal Sections */}
-      <div className="space-y-4">
-        <MealSection title={MealType.Breakfast} entries={mealEntries(MealType.Breakfast)} onDelete={deleteFoodEntry} />
-        <MealSection title={MealType.Lunch} entries={mealEntries(MealType.Lunch)} onDelete={deleteFoodEntry} />
-        <MealSection title={MealType.Dinner} entries={mealEntries(MealType.Dinner)} onDelete={deleteFoodEntry} />
-        <MealSection title={MealType.Snacks} entries={mealEntries(MealType.Snacks)} onDelete={deleteFoodEntry} />
-      </div>
+      {isLoadingLog ? (
+        <div className="flex justify-center items-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-green-500" />
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <MealSection title={MealType.Breakfast} entries={mealEntries(MealType.Breakfast)} onDelete={deleteFoodEntry} />
+          <MealSection title={MealType.Lunch} entries={mealEntries(MealType.Lunch)} onDelete={deleteFoodEntry} />
+          <MealSection title={MealType.Dinner} entries={mealEntries(MealType.Dinner)} onDelete={deleteFoodEntry} />
+          <MealSection title={MealType.Snacks} entries={mealEntries(MealType.Snacks)} onDelete={deleteFoodEntry} />
+        </div>
+      )}
 
       {activeModal === 'addFood' && (
         <AddFoodModal 
           isOpen={true} 
           onClose={() => setActiveModal(null)} 
           onAddFood={addFoodEntry}
-          // FIX: Explicitly type `log` to fix type inference issue with Object.values().
-          recentFoods={logs ? Object.values(logs).flatMap((log: DailyLog) => log.entries).slice(-20) : []}
+          recentFoods={Object.values(logs).flatMap((log: DailyLog) => log.entries).slice(-20)}
         />
       )}
       
@@ -160,10 +201,7 @@ const Dashboard: React.FC<DashboardProps> = ({ userProfile, updateUserProfile, l
           isOpen={true}
           onClose={() => setActiveModal(null)}
           userProfile={userProfile}
-          onSave={(updatedProfile) => {
-            updateUserProfile(updatedProfile);
-            setActiveModal(null);
-          }}
+          onSave={handleSaveSettings}
         />
       )}
     </div>

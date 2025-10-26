@@ -22,6 +22,21 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, userProf
   const [macroMode, setMacroMode] = useState<MacroMode>('percentage');
   const [macroPercentages, setMacroPercentages] = useState({ protein: 30, carbs: 40, fats: 30 });
 
+  // When the modal opens, sync the internal state with the user profile prop
+  useEffect(() => {
+    setFormData(userProfile);
+    // Also derive initial percentages from profile goals if possible
+    const totalCals = (userProfile.macroGoals.protein * 4) + (userProfile.macroGoals.carbs * 4) + (userProfile.macroGoals.fats * 9);
+    if (totalCals > 0) {
+      setMacroPercentages({
+        protein: Math.round(((userProfile.macroGoals.protein * 4) / totalCals) * 100),
+        carbs: Math.round(((userProfile.macroGoals.carbs * 4) / totalCals) * 100),
+        fats: Math.round(((userProfile.macroGoals.fats * 9) / totalCals) * 100),
+      });
+    }
+
+  }, [userProfile]);
+
   const handleInputChange = (field: keyof UserProfile, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -39,7 +54,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, userProf
 
   // Effect to update calorie goal automatically if not manually set
   useEffect(() => {
-    setFormData(prev => ({ ...prev, calorieGoal: recommendedGoals.calorieGoal }));
+    // Only auto-update if the user hasn't manually set a different goal
+    if (formData.calorieGoal === userProfile.calorieGoal) {
+       setFormData(prev => ({ ...prev, calorieGoal: recommendedGoals.calorieGoal }));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recommendedGoals.calorieGoal]);
   
   // Effect to update macro grams when calorie goal or percentages change
@@ -84,7 +103,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, userProf
         finalProfile.macroGoals = calculateMacroGrams(macroPercentages, formData.calorieGoal);
     }
     onSave(finalProfile);
-    onClose();
   };
   
   const totalMacroCalories = (formData.macroGoals.protein * 4) + (formData.macroGoals.carbs * 4) + (formData.macroGoals.fats * 9);

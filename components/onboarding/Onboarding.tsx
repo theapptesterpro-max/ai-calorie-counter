@@ -1,7 +1,7 @@
-
 import React, { useState } from 'react';
 import { UserProfile, Gender, ActivityLevel, Goal, WeightGoalRate, MacroGoals } from '../../types';
 import { calculateBMR, calculateTDEE, calculateCalorieGoal, calculateMacroGrams } from '../../utils/helpers';
+import { formatDate } from '../../utils/helpers';
 
 interface OnboardingProps {
   onComplete: (profile: UserProfile) => void;
@@ -52,6 +52,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
       rate: formData.rate,
       calorieGoal: finalGoals.calorieGoal,
       macroGoals: finalGoals.macroGoals,
+      weightLog: [{ date: formatDate(new Date()), weight: formData.current_kg }],
     });
   };
 
@@ -131,20 +132,20 @@ const Step2 = ({ data, handleChange, next, prev }: any) => (
 
 const Step3 = ({ data, handleChange, next, prev }: any) => (
   <div>
-    <h2 className="text-xl font-semibold mb-4 text-center">Your Goals</h2>
+    <h2 className="text-xl font-semibold mb-4 text-center">Your Goals & Activity</h2>
     <div className="space-y-4">
-       <div>
+      <div>
         <label className="block text-sm font-medium">Activity Level</label>
         <select name="activityLevel" value={data.activityLevel} onChange={handleChange} className="w-full mt-1 p-2 border rounded bg-white dark:bg-slate-800">
-          <option value={ActivityLevel.Sedentary}>Sedentary</option>
-          <option value={ActivityLevel.LightlyActive}>Lightly Active</option>
-          <option value={ActivityLevel.ModeratelyActive}>Moderately Active</option>
-          <option value={ActivityLevel.VeryActive}>Very Active</option>
-          <option value={ActivityLevel.ExtremelyActive}>Extremely Active</option>
+          <option value={ActivityLevel.Sedentary}>Sedentary (little or no exercise)</option>
+          <option value={ActivityLevel.LightlyActive}>Lightly Active (light exercise/sports 1-3 days/week)</option>
+          <option value={ActivityLevel.ModeratelyActive}>Moderately Active (moderate exercise/sports 3-5 days/week)</option>
+          <option value={ActivityLevel.VeryActive}>Very Active (hard exercise/sports 6-7 days a week)</option>
+          <option value={ActivityLevel.ExtremelyActive}>Extremely Active (very hard exercise/physical job)</option>
         </select>
       </div>
       <div>
-        <label className="block text-sm font-medium">Primary Goal</label>
+        <label className="block text-sm font-medium">Goal</label>
         <select name="goal" value={data.goal} onChange={handleChange} className="w-full mt-1 p-2 border rounded bg-white dark:bg-slate-800">
           <option value={Goal.Lose}>Lose Weight</option>
           <option value={Goal.Maintain}>Maintain Weight</option>
@@ -169,39 +170,40 @@ const Step3 = ({ data, handleChange, next, prev }: any) => (
   </div>
 );
 
-const Step4 = ({ goals, finish, prev }: any) => (
+const Step4 = ({ goals, finish, prev }: any) => {
+  if (!goals) return <div>Calculating...</div>;
+  return (
     <div>
-        <h2 className="text-xl font-semibold mb-4 text-center">Your Daily Goals</h2>
-        {goals ? (
-            <div className="text-center bg-green-50 dark:bg-green-900/20 p-6 rounded-lg">
-                <p className="text-lg text-slate-600 dark:text-slate-300">We recommend a daily goal of:</p>
-                <p className="text-4xl font-bold my-2 text-green-600">{Math.round(goals.calorieGoal)}</p>
-                <p className="text-lg text-slate-600 dark:text-slate-300 mb-4">Calories</p>
-                <div className="flex justify-around text-sm text-slate-500">
-                    <div>
-                        <p className="font-bold text-base text-sky-500">{Math.round(goals.macroGoals.protein)}g</p>
-                        <p>Protein</p>
-                    </div>
-                    <div>
-                        <p className="font-bold text-base text-orange-500">{Math.round(goals.macroGoals.carbs)}g</p>
-                        <p>Carbs</p>
-                    </div>
-                    <div>
-                        <p className="font-bold text-base text-yellow-500">{Math.round(goals.macroGoals.fats)}g</p>
-                        <p>Fats</p>
-                    </div>
-                </div>
-                <p className="text-xs text-slate-400 mt-4">You can adjust these goals later in settings.</p>
-            </div>
-        ) : (
-            <p className="text-center">Calculating...</p>
-        )}
-        <div className="flex justify-between mt-6">
-            <button onClick={prev} className="bg-slate-200 text-slate-800 py-2 px-4 rounded-lg hover:bg-slate-300 transition">Back</button>
-            <button onClick={finish} className="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition">Let's Get Started!</button>
+      <h2 className="text-xl font-semibold mb-4 text-center">Your Daily Goals</h2>
+      <div className="text-center bg-green-50 dark:bg-green-900/50 p-6 rounded-lg space-y-4">
+        <div>
+          <p className="text-sm text-slate-500">Calorie Goal</p>
+          <p className="text-4xl font-bold text-green-600">{Math.round(goals.calorieGoal)}</p>
+          <p className="text-xs text-slate-400">calories/day</p>
         </div>
+        <div className="flex justify-around pt-4 border-t border-green-200 dark:border-green-800">
+          <div>
+            <p className="text-sm font-semibold">Protein</p>
+            <p className="text-lg">{Math.round(goals.macroGoals.protein)}g</p>
+          </div>
+          <div>
+            <p className="text-sm font-semibold">Carbs</p>
+            <p className="text-lg">{Math.round(goals.macroGoals.carbs)}g</p>
+          </div>
+          <div>
+            <p className="text-sm font-semibold">Fats</p>
+            <p className="text-lg">{Math.round(goals.macroGoals.fats)}g</p>
+          </div>
+        </div>
+      </div>
+      <p className="text-xs text-center text-slate-400 mt-4">You can adjust these goals later in settings.</p>
+      <div className="flex justify-between mt-6">
+        <button onClick={prev} className="bg-slate-200 text-slate-800 py-2 px-4 rounded-lg hover:bg-slate-300 transition">Back</button>
+        <button onClick={finish} className="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition">Finish Setup</button>
+      </div>
     </div>
-);
+  );
+};
 
 
 export default Onboarding;

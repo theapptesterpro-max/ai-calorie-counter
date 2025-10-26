@@ -1,40 +1,84 @@
-import React, { useCallback } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import Onboarding from './components/onboarding/Onboarding';
 import Dashboard from './components/dashboard/Dashboard';
-import { useLocalStorage } from './hooks/useLocalStorage';
-import { UserProfile, DailyLog } from './types';
+import { useAuth } from './src/hooks/useAuth';
+import { UserProfile } from './types';
+import { getUserProfile, createUserProfile } from './src/services/firestoreService';
+import { Loader2 } from 'lucide-react';
+import AuthPage from './src/components/auth/AuthPage';
 
 const App: React.FC = () => {
-  const [profile, setProfile] = useLocalStorage<UserProfile | null>('user-profile', null);
-  const [logs, setLogs] = useLocalStorage<Record<string, DailyLog>>('daily-logs', {});
+  const { user, loading } = useAuth();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
 
-  const handleOnboardingComplete = useCallback((completedProfile: UserProfile) => {
-    setProfile(completedProfile);
-  }, [setProfile]);
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (user) {
+        setProfileLoading(true);
+        const userProfile = await getUserProfile(user.uid);
+        if (userProfile) {
+          setProfile(userProfile);
+          setNeedsOnboarding(false);
+        } else {
+          // New user, needs to go through onboarding
+          setNeedsOnboarding(true);
+        }
+        setProfileLoading(false);
+      } else {
+        // No user, reset states
+        setProfile(null);
+        setNeedsOnboarding(false);
+        setProfileLoading(false);
+      }
+    };
 
-  const updateLogs = (date: string, newLog: DailyLog) => {
-    // FIX: Changed from functional update to direct update to satisfy the type signature of `setLogs`.
-    setLogs({
-      ...logs,
-      [date]: newLog,
-    });
+    if (!loading) { // Only run fetchProfile when auth state is resolved
+      fetchProfile();
+    }
+  }, [user, loading]);
+
+  const handleOnboardingComplete = async (completedProfile: UserProfile) => {
+    if (user) {
+      await createUserProfile(user.uid, completedProfile);
+      setProfile(completedProfile);
+      setNeedsOnboarding(false);
+    }
   };
-  
-  const updateUserProfile = (updatedProfile: UserProfile) => {
+
+  const handleProfileUpdate = (updatedProfile: UserProfile) => {
     setProfile(updatedProfile);
   };
+  
+  // This is the top-level loading state for the app
+  if (loading || (user && profileLoading)) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900">
+        <Loader2 className="h-12 w-12 animate-spin text-green-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 font-sans">
-      {profile ? (
-        <Dashboard 
-          userProfile={profile} 
-          updateUserProfile={updateUserProfile}
-          logs={logs}
-          updateLogs={updateLogs}
-        />
+      {user ? (
+        needsOnboarding ? (
+          <Onboarding onComplete={handleOnboardingComplete} />
+        ) : profile ? (
+          <Dashboard 
+            userProfile={profile} 
+            updateUserProfile={handleProfileUpdate}
+          />
+        ) : (
+          // This state can happen briefly while profile loads
+          <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900">
+             <Loader2 className="h-12 w-12 animate-spin text-green-500" />
+          </div>
+        )
       ) : (
-        <Onboarding onComplete={handleOnboardingComplete} />
+        <AuthPage />
       )}
     </div>
   );
