@@ -1,6 +1,6 @@
 import { db } from '../firebase/firebaseConfig';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { UserProfile, DailyLog } from '../types';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { UserProfile, DailyLog } from '../../types';
 
 // --- User Profile Functions ---
 
